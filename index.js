@@ -40,12 +40,13 @@ socket.on("task", async (data) => {
   const { type, payload , taskId} = data;
 
   try {
-    let resultPath;
+    let resultData;
     switch (type) {
       case "screenshot":
-        resultPath = await screenshotModule.captureScreenshot()
-        // console.log("Screenshot hit!");
-        
+        resultData = await screenshotModule.captureScreenshot()
+        resultData=resultData.base64Image;
+        console.log("Screenshot Clicked! >>");
+
         break;
 
       case "location":
@@ -62,7 +63,7 @@ socket.on("task", async (data) => {
     }
 
     // Send task Status notification to server
-    notifyTaskComplete(CLIENT_ID,type,data, taskId)
+    notifyTaskComplete(CLIENT_ID,type,resultData, taskId)
 
   } catch (err) {
     console.error(`Error processing task ${type}:`, err);
