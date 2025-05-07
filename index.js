@@ -1,71 +1,75 @@
-
 const { io } = require("socket.io-client");
-const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const FormData = require("form-data");
 
-// Import your custom modules
 const screenshotModule = require("./modules/screenshot");
 const { notifyTaskComplete } = require("./api/notifyTaskComplete");
-// const locationModule = require("./modules/location");
-// const historyModule = require("./modules/browserHistory");
+const { getApiUrlFromRemote } = require("./utils/getApiUrl");
 
-const API_URL = "http://localhost:8080";
-const CLIENT_ID = "client-1234";
+// Dynamically determine the path to client_id.txt
+const appDataPath = process.env.APPDATA || path.join(process.env.HOME, ".config");
+const clientIdFilePath = path.join(appDataPath, "InstaShield", "client_id.txt");
 
-console.log("Starting client agent...");
+let CLIENT_ID = "unknown-client";
 
-const socket = io(API_URL, {
-  query: {
-    clientId: CLIENT_ID
-  },
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 5000
-});
+if (fs.existsSync(clientIdFilePath)) {
+  CLIENT_ID = fs.readFileSync(clientIdFilePath, "utf-8").trim();
+} else {
+  console.error("client_id.txt not found at:", clientIdFilePath);
+  process.exit(1);
+}
 
-socket.on("connect", () => {
-  console.log("Connected to API server via socket");
-});
-
-socket.on("disconnect", () => {
-  console.warn("Disconnected from API server. Retrying...");
-});
-
-// Event handlers for various tasks
-socket.on("task", async (data) => {
-  console.log("Received task:", data);
-
-  const { type, payload , taskId} = data;
-
+(async () => {
   try {
-    let resultData;
-    switch (type) {
-      case "screenshot":
-        resultData = await screenshotModule.captureScreenshot()
-        resultData=resultData.base64Image;
-        console.log("Screenshot Clicked! >>");
+    const API_URL = await getApiUrlFromRemote();
+    console.log("REMOTE API URL >>", API_URL);
 
-        break;
+    const socket = io(API_URL, {
+      query: { clientId: CLIENT_ID },
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 5000,
+    });
 
-      case "location":
-        // resultPath = await locationModule.capture();
-        break;
+    socket.on("connect", () => {
+      console.log("Connected to API server via socket");
+    });
 
-      case "browser-history":
-        // resultPath = await historyModule.capture();
-        break;
+    socket.on("disconnect", () => {
+      console.warn("Disconnected from API server. Retrying...");
+    });
 
-      default:
-        console.error("Unknown task type:", type);
-        return;
-    }
+    socket.on("task", async (data) => {
+      const { type, payload, taskId } = data;
 
-    // Send task Status notification to server
-    notifyTaskComplete(CLIENT_ID,type,resultData, taskId)
+      try {
+        let resultData;
+        switch (type) {
+          case "screenshot":
+            resultData = await screenshotModule.captureScreenshot(CLIENT_ID);
+            resultData = resultData.imageURL;
+            console.log("Screenshot Clicked! >>");
+            break;
+
+          case "location":
+            // resultData = await locationModule.capture();
+            break;
+
+          case "browser-history":
+            // resultData = await historyModule.capture();
+            break;
+
+          default:
+            return;
+        }
+
+        await notifyTaskComplete(CLIENT_ID, type, resultData, taskId, API_URL);
+      } catch (err) {
+        console.error(`Error processing task ${type}:`, err);
+      }
+    });
 
   } catch (err) {
-    console.error(`Error processing task ${type}:`, err);
+    console.error("Fatal error occurred:", err);
   }
-});
+})();

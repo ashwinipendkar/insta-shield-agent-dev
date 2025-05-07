@@ -1,21 +1,32 @@
-const axios = require('axios');
+const fetch = require('node-fetch');  // Import node-fetch (version 2)
 
-const notifyTaskComplete = async ( clientId, taskType, resultData, taskId ) => {
-    console.log("Notification WH Hit!")
-  try {
-    await axios.post('http://192.168.68.174:8080/api/webhook/task-complete', {
-      clientId,
-      taskType,
-      success: true,
-      resultData,
-      taskId
-    });
-    console.log("Success sending notification to server >> ",clientId,taskType,taskId)
-  } catch (err) {
-    console.error('❌ Failed to call webhook:', err.message);
-  }
+const notifyTaskComplete = async (clientId, taskType, resultData, taskId, API_URL) => {
+    console.log("Notification WH Hit!");
+    try {
+        const response = await fetch(`${API_URL}/api/webhook/task-complete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                clientId,
+                taskType,
+                success: true,
+                resultData,
+                taskId
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        console.log("Success sending notification to server >> ", clientId, taskType, taskId);
+    } catch (err) {
+        console.error('❌ Failed to call webhook:', err.message);
+    } 
 };
 
-module.exports={
+module.exports = {
     notifyTaskComplete
-}
+};
