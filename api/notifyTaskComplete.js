@@ -23,7 +23,7 @@ const notifyTaskComplete = async (clientId, taskType, resultData, taskId, API_UR
 
         console.log("Success sending notification to server >> ", clientId, taskType, taskId);
     } catch (err) {
-        console.error('❌ Failed to call webhook:', err.message);
+        console.error('Failed to call webhook:', err.message);
     } 
 };
 

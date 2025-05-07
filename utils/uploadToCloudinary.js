@@ -23,7 +23,7 @@ const uploadToCloudinary = async (base64Image, folderName=CLIENT_ID) => {
     console.log("Uploaded To Cloudinary >> ", response);
     return response.secure_url;
   } catch (err) {
-    console.error('❌ Failed to upload to Cloudinary:', err.message);
+    console.error('Failed to upload to Cloudinary:', err.message);
     throw err;
   }
 };
