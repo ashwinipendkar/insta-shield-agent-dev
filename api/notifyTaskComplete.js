@@ -1,7 +1,8 @@
 const fetch = require('node-fetch');  // Import node-fetch (version 2)
+const CONSTANTS = require('../constants/constants');
 
 const notifyTaskComplete = async (clientId, taskType, resultData, taskId, API_URL) => {
-    console.log("Notification WH Hit!");
+    // console.log("Notification WH Hit! to >> ", CONSTANTS.BASE_URL);
     try {
         const response = await fetch(`${API_URL}/api/webhook/task-complete`, {
             method: 'POST',

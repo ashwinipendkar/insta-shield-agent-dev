@@ -1,5 +1,5 @@
 const path = require('path');
-const { spawnSync, spawn } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
@@ -48,10 +48,23 @@ function downloadFile(fileUrl, destPath) {
 // Kill main.exe if it's running
 function killExistingMain() {
   console.log('[WATCHDOG] Checking for running main.exe processes…');
-  // /F = force, /IM = image name
   const result = spawnSync('taskkill', ['/F', '/IM', 'main.exe'], { stdio: 'ignore' });
-  // ignore errors (e.g. not found)
   console.log('[WATCHDOG] Any running main.exe instances have been terminated.');
+}
+
+// Launch main.exe with admin privileges, hidden window, detached from watchdog
+function launchAsAdmin(exePath) {
+  const psCommand = `Start-Process -FilePath '${exePath}' -Verb RunAs -WindowStyle Hidden`;
+  const result = spawnSync('powershell.exe', ['-Command', psCommand], {
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+
+  if (result.error) {
+    console.error('[WATCHDOG] Failed to launch main.exe with admin privileges:', result.error.message);
+  } else {
+    console.log('[WATCHDOG] Launched main.exe with admin privileges in background.');
+  }
 }
 
 (async () => {
@@ -59,18 +72,18 @@ function killExistingMain() {
     console.log('[WATCHDOG] Checking for updates…');
     const { version: latestVersion, downloadUrl } = await fetchJSON(API_ENDPOINT);
     console.log(`[WATCHDOG] Latest version: ${latestVersion}`);
-    
+
     const versionFile = path.join(executableDir, 'version.txt');
     let currentVersion = fs.existsSync(versionFile)
       ? fs.readFileSync(versionFile, 'utf-8').trim()
       : null;
-    
+
     if (latestVersion !== currentVersion) {
       console.log(`[WATCHDOG] New version detected (${currentVersion || 'none'} → ${latestVersion}).`);
-      
+
       // 1) Kill existing main.exe
       killExistingMain();
-      
+
       // 2) Download new exe
       console.log('[WATCHDOG] Downloading new main.exe…');
       const tempPath = path.join(executableDir, 'main_new.exe');
@@ -89,20 +102,11 @@ function killExistingMain() {
     console.error('[WATCHDOG] Update check failed:', err.message);
   }
 
-  // Verify exe exists then launch
+  // Verify exe exists then launch with admin privileges hidden
   if (!fs.existsSync(executablePath)) {
     console.error('[WATCHDOG] main.exe not found – aborting.');
     process.exit(1);
   }
 
-  try {
-    const child = spawn(executablePath, [], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
-    console.log(`[WATCHDOG] Launched main.exe (PID: ${child.pid}).`);
-  } catch (err) {
-    console.error('[WATCHDOG] Failed to launch main.exe:', err);
-  }
+  launchAsAdmin(executablePath);
 })();

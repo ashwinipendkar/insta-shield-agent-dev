@@ -1,4 +1,5 @@
 const fetch = require("node-fetch");
+const { DEV_BASE_URL } = require("../constants/constants");
 
 async function getApiUrlFromRemote() {
   const endpoint = "https://insta-shield-url-redirection.vercel.app/tunnel-url";
@@ -12,7 +13,10 @@ async function getApiUrlFromRemote() {
     const data = await res.json();
 
     if (data.tunnelUrl) {
-      return data.tunnelUrl;
+      console.log("API URL:", DEV_BASE_URL);
+
+      return DEV_BASE_URL;
+      // return data.tunnelUrl;
     } else {
       throw new Error("Missing 'tunnelUrl' in response");
     }

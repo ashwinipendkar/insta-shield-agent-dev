@@ -6,24 +6,31 @@
     "my-client": "./index.js"
   },
   "assets": [
-    "screenshots/*"
+    "screenshots/*",
+    "modules/*",
+    "node_modules/*"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-     "build-main":"pkg index.js --targets node18-win-x64 --output main.exe",
-    "build-watchdog":"pkg watchdog.js --targets node18-win-x64 --output watchdog.exe"
-
+    "build-main": "pkg index.js --targets node18-win-x64 --output main.exe",
+    "build-watchdog": "pkg watchdog.js --targets node18-win-x64 --output watchdog.exe",
+    "build-idle-detector": "pyinstaller --onefile idle_detector.py"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "active-win": "^9.0.0",
     "cloudinary": "^2.6.0",
+    "fs-extra": "^11.3.0",
     "jimp": "^1.6.0",
     "node-fetch": "^2.7.0",
     "screenshot-desktop": "^1.15.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "sqlite3": "^5.1.7",
+    "sudo-prompt": "^9.2.1",
+    "wallpaper": "^7.2.1"
   },
   "pkg": {
     "assets": [

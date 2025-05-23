@@ -13,7 +13,7 @@ const captureScreenshot = async (CLIENT_ID) => {
   // Step 1: Ensure the directory exists
   try {
     await fs.mkdir(screenshotsDir, { recursive: true });
-  } catch (err) {
+  } catch (err) {  
     console.error('Error creating directory:', err);
   }
 
