@@ -2,10 +2,11 @@ const fetch = require("node-fetch");
 const { DEV_BASE_URL } = require("../constants/constants");
 
 async function getApiUrlFromRemote() {
-  const endpoint = "https://insta-shield-url-redirection.vercel.app/tunnel-url";
+  // const endpoint = "https://insta-shield-url-redirection.vercel.app/tunnel-url";
 
   try {
     const res = await fetch(endpoint);
+
     if (!res.ok) {
       throw new Error(`HTTP error! Status: ${res.status}`);
     }
@@ -21,6 +22,9 @@ async function getApiUrlFromRemote() {
       throw new Error("Missing 'tunnelUrl' in response");
     }
   } catch (err) {
+    console.log("Error fetching API URL:", err);
+    return DEV_BASE_URL;
+
     throw new Error(`Failed to fetch API URL: ${err.message}`);
   }
 }

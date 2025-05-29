@@ -6,7 +6,8 @@ const BASE_DIR = path.dirname(process.execPath); // Useful when running as exe
 let CONSTANTS = {
   CLIENT_ID: "ghost-client",
   BASE_URL: "http://localhost:8080", // change as needed
-  DEV_BASE_URL: "http://192.168.68.100:8080", // change as needed
+  // DEV_BASE_URL: "http://192.168.68.100:8080", // change as needed
+  DEV_BASE_URL: "https://insta-shield-server-zgo6.onrender.com",
   WEBSITE_BLOCK_URL: `/api/blocked-websites`,
 
   REDIRECTION_URL: "https://insta-shield-url-redirection.vercel.app/tunnel-url",

@@ -2,25 +2,24 @@ const { io } = require("socket.io-client");
 const fs = require("fs");
 const path = require("path");
 
-
 const screenshotModule = require("./modules/screenshot");
 const browserHistory = require("./modules/browserHistory");
 const { notifyTaskComplete } = require("./api/notifyTaskComplete");
 const { getApiUrlFromRemote } = require("./utils/getApiUrl");
 const { websiteBlocker } = require("./modules/websiteBlocker");
-const { startUserActivityTracking } = require('./modules/userActivityTracker');
-const { restartMainExe } = require('./modules/exeRestart');
+const { startUserActivityTracking } = require("./modules/userActivityTracker");
+const { restartMainExe } = require("./modules/exeRestart");
 const { BASE_URL } = require("./constants/constants");
-const { startMonitoring, checkForNewCall } = require('./modules/callLogger');
+const { startMonitoring, checkForNewCall } = require("./modules/callLogger");
 const updateWatchdog = require("./modules/update-watchdog");
 
-
-
 // Dynamically determine the path to client_id.txt
-const appDataPath = process.env.APPDATA || path.join(process.env.HOME, ".config");
+const appDataPath =
+  process.env.APPDATA || path.join(process.env.HOME, ".config");
 const clientIdFilePath = path.join(appDataPath, "InstaShield", "client_id.txt");
 
 let CLIENT_ID = "unknown-client";
+let clientVersion = "1.1.0"; // Default version, can be updated later
 
 if (fs.existsSync(clientIdFilePath)) {
   CLIENT_ID = fs.readFileSync(clientIdFilePath, "utf-8").trim();
@@ -29,30 +28,25 @@ if (fs.existsSync(clientIdFilePath)) {
   process.exit(1);
 }
 
-
-
-
 (async () => {
   try {
-
     const API_URL = await getApiUrlFromRemote();
     console.log("REMOTE API URL >>", API_URL);
     // BASE_URL=API_URL;
 
-// =====================================================================
+    // =====================================================================
 
-const websiteBlocked = websiteBlocker(CLIENT_ID,API_URL)
+    const websiteBlocked = websiteBlocker(CLIENT_ID, API_URL);
 
-const callMonitor = startMonitoring(5000, (newCallLog) => {
-  console.log("📞 New call detected in main file:", newCallLog);
-});
+    const callMonitor = startMonitoring(5000, (newCallLog) => {
+      console.log("📞 New call detected in main file:", newCallLog);
+    });
 
-// ======================================================================
-
+    // ======================================================================
 
     const socket = io(API_URL, {
-      query: { clientId: CLIENT_ID },
-      reconnection: true, 
+      query: { clientId: CLIENT_ID, clientVersion },
+      reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 5000,
     });
@@ -65,10 +59,9 @@ const callMonitor = startMonitoring(5000, (newCallLog) => {
       console.warn("Disconnected from API server. Retrying...");
     });
 
-// Check for WatchDog Update ===============================================================
+    // Check for WatchDog Update ===============================================================
     // updateWatchdog()
-// =====================================================================================
-
+    // =====================================================================================
 
     // Emitting Status to Server =============================================================
 
@@ -77,10 +70,10 @@ const callMonitor = startMonitoring(5000, (newCallLog) => {
     startUserActivityTracking((status) => {
       console.log(`[User Status] ${status}`);
       if (socket && socket.connected && status !== lastEmittedStatus) {
-        socket.emit("user-status", { 
+        socket.emit("user-status", {
           clientId: CLIENT_ID,
-          status, 
-          timestamp: Date.now()
+          status,
+          timestamp: Date.now(),
         });
         lastEmittedStatus = status;
       }
@@ -101,8 +94,8 @@ const callMonitor = startMonitoring(5000, (newCallLog) => {
 
           case "restart-client":
             resultData = await restartMainExe()
-            .then((msg) => console.log(msg))
-            .catch((err) => console.error(err));
+              .then((msg) => console.log(msg))
+              .catch((err) => console.error(err));
             break;
 
           case "browser-history":
@@ -113,22 +106,25 @@ const callMonitor = startMonitoring(5000, (newCallLog) => {
             return;
         }
 
-        await notifyTaskComplete(CLIENT_ID, type, resultData, taskId, API_URL);
+        await notifyTaskComplete(
+          CLIENT_ID,
+          type,
+          resultData,
+          taskId,
+          API_URL,
+          clientVersion
+        );
       } catch (err) {
         console.error(`Error processing task ${type}:`, err);
       }
     });
-
   } catch (err) {
     console.error("Fatal error occurred:", err);
   }
 })();
 
-
 // =================================================================================
-
 
 // startUserActivityTracking((status) => {
 //   console.log(`[User Status] ${status}`);
 // });
-
